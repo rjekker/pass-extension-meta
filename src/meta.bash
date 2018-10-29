@@ -12,7 +12,7 @@ while getopts 'auUCc' opt; do
             property='user|username|login'
         ;;
         U)
-            property='url'
+            property='url|http'
             ;;
         c)
             clip='y'
