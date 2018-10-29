@@ -1,6 +1,6 @@
 # pass meta
 
-An extension for the [password store](https://www.passwordstore.org/) that allows retrieval of values for specific properties from the meta data stored in a password file.
+An extension for the pass [password store](https://www.passwordstore.org/) that allows retrieval of values for specific properties from the meta data stored in a password file.
 
 [password store](https://www.passwordstore.org/) proposes a format to store meta data in the password file. The password is stored in the first line followed by data like the URL, username and other meta data in the following lines. A common password file would look like this:
 ```
@@ -12,7 +12,6 @@ AnswerToASecretQuestion: 42
 
 A common use case is to copy the first line, the password, using `pass
 show -c <password file>`.
-DDo
 The meta data usually cannot be copied but needs to be displayed as it
 contains type and value.
 
