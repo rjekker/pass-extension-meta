@@ -34,8 +34,17 @@ Similarly, we can pass any property we like:
 42
 ```
 
-
 If the property is not found, the command simply returns nothing.
+
+## Copy to clipboard
+
+Instead of showing the value, you can also have it copied to the
+clipboard by specifying the `-c` option:
+
+`pass meta -c <password file> notes` will copy the value of the
+"notes" property to the clipboard.
+
+
 
 ## Case Insensitivity
 
