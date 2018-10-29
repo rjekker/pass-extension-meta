@@ -18,10 +18,10 @@ while getopts 'auUCc' opt; do
             clip='y'
             ;;
         C)
-            match_opts='-E'
+            regex_opts=''
             ;;
         a)
-            first_match_opts=''
+            first_match_only='0'
             ;;
         \?)
             exit 1
@@ -47,8 +47,8 @@ get_perl_source() {
     cat <<EOF
 my \$dummy=<>;   # throw away password line
 while(<>){
-    if(/^\s*?       # read any whitespace before the property name 
-       ($1):         # property name and :
+    if(/^\s*       # read any whitespace before the property name 
+       ($1):       # property name and :
        \s*         # read any whitespace after :
        (.*)        # capture the rest of the line
        /x$regex_opts){
