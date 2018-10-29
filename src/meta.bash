@@ -1,7 +1,7 @@
 #!/bin/bash
 
-match_opts='-iE'
-first_match_opts='-m1'
+regex_opts='i'
+first_match_only='1'
 property=''
 clip=''
 
@@ -41,7 +41,25 @@ property=${property:-$2}
 [[ -z $property ]] && die "Please specify a property to search for"
 [[ -f $passfile ]] || die "Error: $path is not in the password store."
 
-value=$($GPG -d "${GPG_OPTS[@]}" "$passfile" | tail -n +2 | grep $first_match_opts $match_opts "^${property}:" | cut -d' ' -f 2-)
+# This function returns a perl script
+# It's an ugly way to include a nicely indented script here
+get_perl_source() {
+    cat <<EOF
+my \$dummy=<>;   # throw away password line
+while(<>){
+    if(/^\s*?       # read any whitespace before the property name 
+       ($1):         # property name and :
+       \s*         # read any whitespace after :
+       (.*)        # capture the rest of the line
+       /x$regex_opts){
+           print \$2;
+           exit if $first_match_only;
+    }
+}
+EOF
+}
+
+value=$($GPG -d "${GPG_OPTS[@]}" "$passfile" | perl -nl <(get_perl_source "$property" ) )
 if [[ -n $clip ]]; then
     clip "$value"
 else
