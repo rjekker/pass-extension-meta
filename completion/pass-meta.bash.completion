@@ -1,0 +1,5 @@
+PASSWORD_STORE_EXTENSION_COMMANDS+=(meta)
+
+__password_store_extension_complete_meta() {
+    _pass_complete_entries 1
+}

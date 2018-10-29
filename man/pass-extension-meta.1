@@ -1,0 +1,79 @@
+.TH pass-extension-meta 1 "2018 October 29" "Version 1.0.0" "User Commands"
+
+.SH NAME
+pass-extension-meta - a password-store extension to retrieve meta-data properties from password files
+
+.SH SYNOPSIS
+.B pass
+meta
+[options]
+[
+.I pass-name
+]
+[
+.I property-name
+]
+.br
+
+.SH DESCRIPTION
+
+.BR pass(1)
+proposes a format to store meta data in the password file.  The
+password is stored in the first line followed by data like the URL,
+username and other meta data in the following lines.
+.B pass-extension-meta
+is an extension for  
+.BR pass(1)
+that allows users to retrieve specific meta-data values from a
+password file. The passwordfile itself is given by
+.I pass-name
+, and the property to search for is given by
+.I property-name
+, unless either -u or -U are specified. By default, property names are case
+insensitive and only the first matching value is returned.
+
+
+.SH OPTIONS
+.IP -a
+Print all matching values
+.IP -u
+Search for a username. This will find properties called
+.I user
+,
+.I username
+, or
+.I login
+ .
+
+.IP -U
+Search for a url. This will find properties called
+.I url
+,
+.I Url
+, 
+.I URL
+, etc.
+
+.IP -C
+Do a case-sensitive search.
+
+.SH SEE ALSO
+.BR pass (1)
+
+.SH AUTHOR
+rjekker
+
+
+.SH HOME
+.I https://github.com/rjekker/pass-extension-meta
+
+
+.SH REPORTING BUGS
+.I https://github.com/rjekker/pass-extension-meta/issues
+
+.SH LICENSE
+Copyright \(co 2018 rjekker
+.PP
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it. There is NO WARRANTY, to the extent permitted by law.
