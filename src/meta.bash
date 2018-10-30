@@ -38,28 +38,42 @@ check_sneaky_paths "$path"
 passfile="$PREFIX/$path.gpg"
 property=${property:-$2}
 
-[[ -z $property ]] && die "Please specify a property to search for"
 [[ -f $passfile ]] || die "Error: $path is not in the password store."
 
 # This function returns a perl script
 # It's an ugly way to include a nicely indented script here
 get_perl_source() {
     cat <<EOF
-my \$dummy=<>;   # throw away password line
+my \$dummy=<>; # skip password
+my \$needle="$1"; # thing to search for
+
+sub  trim { my \$s = shift; \$s =~ s/^\s+|\s+\$//g; return \$s };
+
 while(<>){
-    if(/^\s*       # read any whitespace before the property name 
-       ($1):       # property name and :
-       \s*         # read any whitespace after :
-       (.*)        # capture the rest of the line
-       /x$regex_opts){
-           print \$2;
-           exit if $first_match_only;
+    if(/^\s*         # read any whitespace before the property name 
+       (.+?):        # property name and :
+       \s*           # read any whitespace after :
+       (.*)          # capture the rest of the line
+       /x){
+           my \$prop_name = \$1;
+           my \$prop_val = \$2;
+           if(\$needle){
+               # we are searching a specific prop
+               if(\$prop_name =~ /(\$needle)/$regex_opts){
+                   # this one matches; print the value
+                   print \$prop_val;
+                   exit if $first_match_only;
+               }
+           } else {
+               # not searching; just printing all metadata props
+               print trim(\$prop_name);
+           }
     }
 }
 EOF
 }
 
-value=$($GPG -d "${GPG_OPTS[@]}" "$passfile" | perl -nl <(get_perl_source "$property" ) )
+value=$($GPG -d "${GPG_OPTS[@]}" "$passfile" | perl -l <(get_perl_source "$property" ) )
 if [[ -n $clip ]]; then
     clip "$value"
 else
