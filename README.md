@@ -2,18 +2,26 @@
 
 An extension for the pass [password store](https://www.passwordstore.org/) that allows retrieval of values for specific properties from the meta data stored in a password file.
 
-[password store](https://www.passwordstore.org/) proposes a format to store meta data in the password file. The password is stored in the first line followed by data like the URL, username and other meta data in the following lines. A common password file would look like this:
+[password store](https://www.passwordstore.org/) proposes a format to
+store meta data in the password file.  The password is stored in the
+first line followed by data like the URL, username and other meta data
+in the following lines.
+
+A password file might look like this (this is a slightly silly
+example, but it will allow us to explain the functionality of this
+extension):
+
 ```
 Yw|ZSNH!}z"6{ym9pI
 URL: *.amazon.com/*
-Username: AmazonianChicken@example.com
-AnswerToASecretQuestion: 42
+Username: AmazonianChicken@example.co
+url: https://amazon.com/someotherurl
+notes: Buy milk
 ```
 
 A common use case is to copy the first line, the password, using `pass
-show -c <password file>`.
-The meta data usually cannot be copied but needs to be displayed as it
-contains type and value.
+show -c <password file>`. The meta data usually cannot be copied but
+needs to be displayed as it contains type and value.
 
 ## pass meta
 
@@ -28,13 +36,22 @@ AmazonianChicken@example.com
 
 Similarly, we can pass any property we like:
 
-`pass meta <password file> AnswerToASecretQuestion`
+`pass meta <password file> notes`
 
 ```
-42
+Buy milk
 ```
 
-If the property is not found, the command simply returns nothing.
+If the property is not found, the command returns a list of all the property names:
+
+`pass meta <password file>`
+
+``` 
+URL
+Username
+url
+notes
+```
 
 ## Copy to clipboard
 
@@ -44,7 +61,66 @@ clipboard by specifying the `-c` option:
 `pass meta -c <password file> notes` will copy the value of the
 "notes" property to the clipboard.
 
+## Finding usernames
 
+Passing the option -u will return any properties with the names
+`user`, `username` or `login`. By default this is case-insensitive, so
+it will also find `Username`, for example.
+
+`pass meta -cu <password file>` will find the (first) username and
+copy it to the clipboard.
+
+## Finding urls
+
+Passing the option -U will return any properties with the name `url`
+or `http`. By default this is case-insensitive, so it will also find
+`URL`, for example.
+
+`pass meta -cU <password file>` will find the first URL and copy it to
+the clipboard.
+
+## Finding all matches
+
+By default, `pass meta` only prints the first matching property. If
+you want to see all matches, pass `-a`. This will print all
+matches. For example, to print all url fields:
+
+`pass meta -aU <password file>`
+
+```
+*.amazon.com/*
+https://amazon.com/someotherurl
+```
+
+## Complex searches
+
+The search term you pass is used by the script as a (part of a) Perl
+regular expression. This means that you can do quite powerful things,
+like searching for multiple words:
+
+`pass meta -a <password file> AnswerToASecretQuestion 'user|notes'`
+
+```
+AmazonianChicken@example.com
+Just a note here
+```
+
+Or to match any properties with names not starting with the letter u:
+
+`pass meta -a <password file> AnswerToASecretQuestion '^[^u]'`
+
+```
+Just a note here
+```
+
+Note that in the example above we have to pass the `-a` option,
+because the normal behaviour would be to return only the first
+matching line, and we wouldn't see the notes. 
+
+Some more technical notes: before the search term is used as a regular
+expression, any whitespace is removed from the start of the line. The
+regular expression will only match the content of the line up to the
+first colon (`:`). 
 
 ## Case Insensitivity
 
@@ -54,24 +130,12 @@ AnswerToASecretQuestion` and `pass meta <password file>
 answertoasecretquestion` will give the same result. If you need case
 sensitive matching, pass the -C option:
 
-`pass meta -C <password file> AnswerToASecretQuestion`
+`pass meta -C <password file> url`
 
-## Finding usernames
+```
+https://amazon.com/someotherurl
+```
 
-Passing the option -u will return any properties with the names
-`user`, `username` or `login`. By default this is case-insensitive, so
-it will also find `Username`, for example.
-
-## Finding urls
-
-Passing the option -U will return any properties with the name
-`url`. By default this is case-insensitive, so it will also find
-`URL`, for example.
-
-## Finding all matches
-
-By default, `pass meta` only prints the first matching property. If
-you want to see all matches, pass `-a`. This will print all matches.
 
 ## Installation
 
