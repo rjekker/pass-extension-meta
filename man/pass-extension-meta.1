@@ -32,6 +32,14 @@ password file. The passwordfile itself is given by
 , unless either -u or -U are specified. By default, property names are case
 insensitive and only the first matching value is returned.
 
+It is assumed that property names are separated from values by a colon (:).
+
+If no property matching the given property-name is not found, the
+command returns nothing. But if you don't specify a property to search
+for, a list of all the property names is returned.
+
+
+
 
 .SH OPTIONS
 .IP -a
@@ -53,7 +61,7 @@ Search for a url. This will find properties called
 ,
 .I Url
 , 
-.I URL
+.I http
 , etc.
 
 .IP -C

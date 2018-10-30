@@ -42,7 +42,10 @@ Similarly, we can pass any property we like:
 Buy milk
 ```
 
-If the property is not found, the command returns a list of all the property names:
+If the property is not found, the command returns nothing.
+
+But if you don't specify a property to search for, a list of all the
+property names is given:
 
 `pass meta <password file>`
 
