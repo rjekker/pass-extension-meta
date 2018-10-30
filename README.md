@@ -98,19 +98,19 @@ The search term you pass is used by the script as a (part of a) Perl
 regular expression. This means that you can do quite powerful things,
 like searching for multiple words:
 
-`pass meta -a <password file> AnswerToASecretQuestion 'user|notes'`
+`pass meta -a <password file> 'user|notes'`
 
 ```
 AmazonianChicken@example.com
-Just a note here
+Buy milk
 ```
 
 Or to match any properties with names not starting with the letter u:
 
-`pass meta -a <password file> AnswerToASecretQuestion '^[^u]'`
+`pass meta -a <password file> '^[^u]'`
 
 ```
-Just a note here
+Buy milk
 ```
 
 Note that in the example above we have to pass the `-a` option,
