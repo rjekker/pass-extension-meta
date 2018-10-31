@@ -229,20 +229,25 @@ class Layout:
     # Note: the processing functions assume that validation was passed correctly
 
     def _process_prop(self, value, layout_param):
-        """Sets a property based on a 'prop:X' layout rule"""
+        """Sets a property based on a 'prop:X' layout rule; return Credentials object or None"""
+        c = Credentials()
         if layout_param == "ignore":
-            return None
+            return c
         m = re.match(r'prop:\s*(.*)', layout_param)
-        return {m.group(1): value}
+        c.add_prop(m.group(1), value)
+        return c
 
     def _process_key_value(self, line, layout_param):
-        """Sets a property based on a 'key:value' layout rule"""
+        """Sets a property based on a 'key:value' layout rule; return Credentials object"""
+        c = Credentials()
         m = re.match(r'key(.)value', layout_param)
         sep = m.group(1)
         m = re.match(r'\s*(.*?)' + sep + r'\s*(.*)\s*', line)
         if not m:
-            return line
-        return {m.group(1): m.group(2)}
+            c.add_line(line)
+        else:
+            c.add_prop(m.group(1), m.group(2))
+        return c
 
     def process_dirname(self, directory):
         """"Get data based on directory name and layout.dirname. Returns dict"""
@@ -261,15 +266,27 @@ class Layout:
             elif c == "password":
                 cred.add_password(pwd, lines[i])
             elif c.startswith("prop"):
+                cred.merge(self._process_prop(lines[i], c))
+            elif c.startswith("key"):
+                cred.merge(self._process_key_value(lines[i], c))
+            else:
+                cred.add_line(lines[i])
+        return cred
+
+    def process_tail(self, lines):
+        cred = Credentials()
+        for i, c in enumerate(self.contents):
+            if c == "ignore":
+                continue
+            elif c == "password":
+                cred.add_password(pwd, lines[i])
+            elif c.startswith("prop"):
                 cred.add(self._process_prop(lines[i], c))
             elif c.startswith("key"):
                 cred.add(self._process_key_value(lines[i], c))
             else:
                 cred.add_line(lines[i])
         return cred
-
-    def process_tail(self, lines):
-        
 
     def __str__(self):
         return str(self.__dict__)
@@ -298,8 +315,8 @@ class PasswordFile(PassDataSource):
 
     def get_credentials(self):
         cred = Credentials()
-        cred.add(self.layout.process_dirname(os.path.basename(os.path.dirname(self.path))))
-        cred.add(self.layout.process_filename(os.path.basename(self.pwd)))
+        cred.merge(self.layout.process_dirname(os.path.basename(os.path.dirname(self.path))))
+        cred.merge(self.layout.process_filename(os.path.basename(self.pwd)))
         cred.merge(self.layout.process_contents(self.lines, self.pwd))
 
         return cred
