@@ -2,11 +2,22 @@
 from __future__ import print_function
 
 # TODO: Add a nice module header
+# TODO: Add unit tests
+# TODO: test plain-text lines
+# TODO: Test key-value lines with no key
+# TODO: use logger for debug
+# TODO: change config: unit=dir or unit=file
+# TODO: we get a dir and a file section
+# TODO: output to json, xml?
+# TODO: same functionality as meta, but expand on it
+# TODO: output as csv?
+# TODO: make output work for dmenu
 import argparse
 import os
 import sys
 import subprocess
 import re
+import json
 import ConfigParser
 
 LAYOUT_FILE_NAME = ".pass-layout"
@@ -50,11 +61,79 @@ def get_toplevel_dir():
 toplevel = get_toplevel_dir()
 
 
+class Credentials:
+    """This class will contains password and metadata"""
+    def __init__(self):
+        self._passwords = {}
+        self._metadata = {}
+        self._text = []
+
+    @property
+    def passwords(self):
+        return self._passwords
+
+    def add_password(self, pwd_path, password):
+        if pwd_path in self._passwords:
+            die("Setting multiple passwords for " + pwd_path, 9)
+        self._passwords[pwd_path] = password
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+    @property
+    def text(self):
+        return self._text
+
+    def add_prop(self, key, value):
+        self.metadata.setdefault(key, []).append(value)
+
+    def add_dict(self, d):
+        for k in d:
+            self.add_prop(k, d[k])
+
+    def add_line(self, line):
+        self._text.append(line)
+
+    def add(self, x):
+        if x is None:
+            return
+        if type(x) is dict:
+            self.add_dict(x)
+        elif type(x) is str:
+            self.add_line(x)
+        else:
+            self.add_line(str(x))
+
+    def merge(self, other):
+        assert isinstance(other, Credentials)
+        for k, v in other.passwords.items():
+            self.add_password(k, v)
+        for k, v in other.metadata.items():
+            for i in v:
+                self.add_prop(k, i)
+        for l in other.text:
+            self.add_line(l)
+
+    def to_json(self):
+        return json.dumps({
+            'password': self.passwords,
+            'metadata': self.metadata,
+            'text': self.text
+        })
+
+    def __str__(self):
+        return str(self.__dict__)
+
 class Layout:
+    """This class finds and parses .pass-layout, and can return correct
+    key/value pairs given password file data"""
     def __init__(self, directory):
+        debug("Creating Layout for " + directory)
         self._file = Layout.search(directory)
         self._config = Layout.load(self._file)
         debug(self._config.items("layout"))
+        self._validate()
 
     @property
     def filename(self):
@@ -66,7 +145,7 @@ class Layout:
 
     @property
     def contents(self):
-        return self._config.get('layout', 'contents')
+        return self._contents
 
     @property
     def tail(self):
@@ -80,6 +159,7 @@ class Layout:
             debug("Checking " + directory)
             f = os.path.join(directory, LAYOUT_FILE_NAME)
             if os.path.isfile(f):
+                debug("Found: " + f)
                 return f
             else:
                 directory = os.path.dirname(directory)
@@ -88,6 +168,7 @@ class Layout:
 
     @staticmethod
     def load(f):
+        """Load config from file or, if file not found, return default config"""
         config = ConfigParser.SafeConfigParser(DEFAULT_LAYOUT)
         if f:
             try:
@@ -101,34 +182,94 @@ class Layout:
             config.add_section("layout")
         return config
 
+    def _validate_dir_or_file(self, param, param_name):
+        if param == "ignore":
+            return
+        else:
+            m = re.match(r'prop:\s*(.*)', param)
+            if not m:
+                die("Invalid value for '{}' -- in layout file {}".format(param_name, self._file), 4)
+            if not m.group(1):
+                die("Missing propertyname for '{}' -- in layout file {}".format(param_name, self._file), 4)
+
+    def _validate_line_param(self, param, param_name):
+        if param == "ignore":
+            return
+        elif param.startswith("prop"):
+            m = re.match(r'prop:\s*(.*)', param)
+            if not m:
+                die("Invalid value for '{}' -- in layout file {}".format(param_name, self._file), 4)
+            if not m.group(1):
+                die("Missing propertyname for '{}' -- in layout file {}".format(self._file), 4)
+        elif param.startswith("key"):
+            m = re.match(r'key(.)value', param)
+            if not m:
+                die("Invalid value for '{}' -- in layout file {}".format(param_name, self._file), 4)
+
+    def _validate(self):
+        """Do some preliminary checks and parsing on layout config"""
+        self._validate_dir_or_file(self.dirname, "dirname")
+        self._validate_dir_or_file(self.filename, "filename")
+
+        try:
+            contents = json.loads(self._config.get('layout', 'contents'))
+            if type(contents) is not list:
+                die("Value for 'contents' is not a list -- in layout file {}".format(self._file), 4)
+            if not all([type(s) is unicode for s in contents]):
+                die("'contents' should only contain strings -- in layout file {}".format(self._file), 4)
+            self._contents = contents
+        except ValueError as e:
+            die("Value for 'contents' is not a valid list of strings -- in layout file {}".format(self._file), 4)
+
+        for i, l in enumerate(contents):
+            self._validate_line_param(l, "line " + str(i))
+
+        self._validate_line_param(self.tail, "tail")
+
+    # Note: the processing functions assume that validation was passed correctly
+
+    def _process_prop(self, value, layout_param):
+        """Sets a property based on a 'prop:X' layout rule"""
+        if layout_param == "ignore":
+            return None
+        m = re.match(r'prop:\s*(.*)', layout_param)
+        return {m.group(1): value}
+
+    def _process_key_value(self, line, layout_param):
+        """Sets a property based on a 'key:value' layout rule"""
+        m = re.match(r'key(.)value', layout_param)
+        sep = m.group(1)
+        m = re.match(r'\s*(.*?)' + sep + r'\s*(.*)\s*', line)
+        if not m:
+            return line
+        return {m.group(1): m.group(2)}
+
     def process_dirname(self, directory):
-        m = re.match(r'prop:\s*(.*)', self.dirname)
-        if m:
-            key = m.group(1)
-            if not key:
-                die("No property name given for dirname in {}".format(self._file), 4)
-            return {key: directory}
-        elif self.dirname == "ignore":
-            return {}
-        else:
-            die("Invalid layout for dirname in {}".format(self._file), 4)
+        """"Get data based on directory name and layout.dirname. Returns dict"""
+        return self._process_prop(directory, self.dirname)
 
-    def process_filename(self, file):
-        m = re.match(r'prop(:?)\s*(.*)', self.filename)
-        if m and m.group(1):
-            # We have "prop:key"
-            key = m.group(2)
-            if not key:
-                die("No property name given for filename in {}".format(self._file), 4)
-            return {key: file}
-        elif m:
-            # We have just "prop"
-            return {file: None}
-        elif self.filename == "ignore":
-            return {}
-        else:
-            die("Invalid layout for filename in {}".format(self._file), 4)
+    def process_filename(self, filename):
+        """"Get data based on file name and layout.filename. Returns dict"""
+        return self._process_prop(filename, self.filename)
 
+    def process_contents(self, lines, pwd):
+        """"Get data based on file content. Returns a Credentials object"""
+        cred = Credentials()
+        for i, c in enumerate(self.contents):
+            if c == "ignore":
+                continue
+            elif c == "password":
+                cred.add_password(pwd, lines[i])
+            elif c.startswith("prop"):
+                cred.add(self._process_prop(lines[i], c))
+            elif c.startswith("key"):
+                cred.add(self._process_key_value(lines[i], c))
+            else:
+                cred.add_line(lines[i])
+        return cred
+
+    def process_tail(self, lines):
+        
 
     def __str__(self):
         return str(self.__dict__)
@@ -137,15 +278,16 @@ class PassDataSource(object):
     def __init__(self, directory):
         self.layout = Layout(directory)
 
+    def get_credentials(self):
+        raise NotImplementedError
+
 class PasswordFile(PassDataSource):
     def __init__(self, pwd, path):
+        debug("Creating Passwordfile for " + pwd)
         super(PasswordFile, self).__init__(os.path.dirname(path))
         self.path = path
         self.pwd = pwd
         self.lines = self.load()
-        self.data = self.get_data()
-        debug(self.lines)
-        debug(self.data)
 
     def load(self):
         try:
@@ -154,10 +296,13 @@ class PasswordFile(PassDataSource):
             die("Error running pass:" + e.message)
         return s.splitlines()
 
-    def get_data(self):
-        data = self.layout.process_dirname(os.path.basename(os.path.dirname(self.path)))
-        data.update(self.layout.process_filename(os.path.basename(self.pwd)))
-        return data
+    def get_credentials(self):
+        cred = Credentials()
+        cred.add(self.layout.process_dirname(os.path.basename(os.path.dirname(self.path))))
+        cred.add(self.layout.process_filename(os.path.basename(self.pwd)))
+        cred.merge(self.layout.process_contents(self.lines, self.pwd))
+
+        return cred
 
     def __str__(self):
         return "Password file {}".format(self.pwd)
@@ -165,33 +310,25 @@ class PasswordFile(PassDataSource):
 class PasswordDir(PassDataSource):
     pass
 
-class Credentials:
-    def __init__(self, pwd):
-        self.pwd = pwd
 
-        self.source = Credentials.get_source(self.pwd)
-        debug(self)
-
-    @staticmethod
-    def get_source(pwd):
-        """Determine source data file or dir"""
-        path = os.path.join(toplevel, pwd)
-        if os.path.isdir(path):
-            return PasswordDir(pwd)
-        else:
-            return PasswordFile(pwd, path)
-
-    def __str__(self):
-        return "Credentials object from {}".format(
-            self.source
-        )
+def get_source(pwd):
+    """Determine source data file or dir"""
+    path = os.path.join(toplevel, pwd)
+    if os.path.isdir(path):
+        return PasswordDir(pwd)
+    else:
+        return PasswordFile(pwd, path)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Retrieve password and/or metadata from password-store')
-    parser.add_argument("path", nargs=1)
-    args = parser.parse_args()
+    src = get_source("ZZP/pluralsight/analytics")
+    cred = src.get_credentials()
+    print(cred.to_json())
+    # parser = argparse.ArgumentParser(
+    #     description='Retrieve password and/or metadata from password-store')
+    # parser.add_argument("path", nargs=1)
+    # args = parser.parse_args()
+    #
+    # debug("Using password store at " + get_toplevel_dir())
+    # #get_source(args.path[0])
 
-    debug("Using password store at " + get_toplevel_dir())
-    cred = Credentials(args.path[0])
