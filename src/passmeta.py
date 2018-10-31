@@ -275,17 +275,19 @@ class Layout:
 
     def process_tail(self, lines):
         cred = Credentials()
-        for i, c in enumerate(self.contents):
-            if c == "ignore":
-                continue
-            elif c == "password":
-                cred.add_password(pwd, lines[i])
-            elif c.startswith("prop"):
-                cred.add(self._process_prop(lines[i], c))
-            elif c.startswith("key"):
-                cred.add(self._process_key_value(lines[i], c))
-            else:
-                cred.add_line(lines[i])
+        tail = lines[len(self.contents):]
+        if self.tail  == "ignore":
+            return cred
+        elif self.tail.startswith("key"):
+            for l in tail:
+                cred.merge(self._process_key_value(l, self.tail))
+            return cred
+
+        tail = "\n".join(tail)
+        if self.tail.startswith("prop"):
+            cred.merge(self._process_prop(tail, self.tail))
+        else:
+            cred.add_line(tail)
         return cred
 
     def __str__(self):
@@ -318,7 +320,7 @@ class PasswordFile(PassDataSource):
         cred.merge(self.layout.process_dirname(os.path.basename(os.path.dirname(self.path))))
         cred.merge(self.layout.process_filename(os.path.basename(self.pwd)))
         cred.merge(self.layout.process_contents(self.lines, self.pwd))
-
+        cred.merge(self.layout.process_tail(self.lines))
         return cred
 
     def __str__(self):
