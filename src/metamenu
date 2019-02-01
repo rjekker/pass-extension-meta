@@ -1,25 +1,41 @@
 #!/usr/bin/env bash
 
+set -x
+
 shopt -s nullglob globstar
 
 typeit=0
-if [[ $1 == "--type" ]]; then
-	typeit=1
-	shift
-fi
+openurl=0
+
+while (( "$#" )); do  
+    if [[ $1 = "--type" ]]; then
+	    typeit=1
+    elif [[ $1 = "--openurl" ]]; then
+	    openurl=1
+    fi
+    shift
+done
+    
 
 prefix=${PASSWORD_STORE_DIR-~/.password-store}
 password_files=( "$prefix"/**/*.gpg )
 password_files=( "${password_files[@]#"$prefix"/}" )
 password_files=( "${password_files[@]%.gpg}" )
 
-password=$(printf '%s\n' "${password_files[@]}" | dmenu "$@")
+passwordfile=$(printf '%s\n' "${password_files[@]}" | dmenu "$@")
 
-[[ -n $password ]] || exit
+[[ -n $passwordfile ]] || exit
 
-if [[ $typeit -eq 0 ]]; then
-	pass meta -cu "$password" 2>/dev/null
+if [[ $openurl = 1 ]]; then
+    pass meta -U "$passwordfile" 2>/dev/null | xargs x-www-browser
 else
-	pass meta -u "$password" | { IFS= read -r pass; printf %s "$pass"; } |
-		xdotool type --clearmodifiers --file -
+    if [[ $typeit = 0 ]]; then
+	    pass meta -cu "$passwordfile" 2>/dev/null
+    else
+	    pass meta -u "$passwordfile" | { IFS= read -r pass; printf %s "$pass"; } |
+		    xdotool type --clearmodifiers --file -
+    fi
+    
 fi
+    
+
