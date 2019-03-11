@@ -1,0 +1,8 @@
+- todo: remember last and/or most recently used items -> keypress that toggles between pwd and user
+- editing properties
+- is completion script installed in right directory (/usr/share or /etc/bash_completion.d ?)
+- passmenu clone for users..
+- create new pwd files with user, pwd, url
+- create an extension that opens browser for the url that belongs to a pwd
+- make things configurable (like -u and -U word lists)
+
