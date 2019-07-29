@@ -7,22 +7,22 @@ shopt -s nullglob globstar
 typeit=0
 openurl=0
 
-while (( "$#" )); do  
+while (( "$#" )); do
     if [[ $1 = "--type" ]]; then
-	    typeit=1
+        typeit=1
     elif [[ $1 = "--openurl" ]]; then
-	    openurl=1
+        openurl=1
     fi
     shift
 done
-    
+
 
 prefix=${PASSWORD_STORE_DIR-~/.password-store}
 password_files=( "$prefix"/**/*.gpg )
 password_files=( "${password_files[@]#"$prefix"/}" )
 password_files=( "${password_files[@]%.gpg}" )
 
-passwordfile=$(printf '%s\n' "${password_files[@]}" | dmenu "$@")
+passwordfile=$(printf '%s\n' "${password_files[@]}" | dmenu -p "Get user for: " "$@")
 
 [[ -n $passwordfile ]] || exit
 
@@ -30,12 +30,9 @@ if [[ $openurl = 1 ]]; then
     pass meta -U "$passwordfile" 2>/dev/null | xargs x-www-browser
 else
     if [[ $typeit = 0 ]]; then
-	    pass meta -cu "$passwordfile" 2>/dev/null
+        pass meta -cu "$passwordfile" 2>/dev/null
     else
-	    pass meta -u "$passwordfile" | { IFS= read -r pass; printf %s "$pass"; } |
-		    xdotool type --clearmodifiers --file -
+        pass meta -u "$passwordfile" | { IFS= read -r pass; printf %s "$pass"; } |
+            xdotool type --clearmodifiers --file -
     fi
-    
 fi
-    
-
