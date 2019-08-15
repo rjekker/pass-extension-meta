@@ -6,12 +6,15 @@ shopt -s nullglob globstar
 
 typeit=0
 openurl=0
+prompt="User for:"
+
 
 while (( "$#" )); do
     if [[ $1 = "--type" ]]; then
         typeit=1
     elif [[ $1 = "--openurl" ]]; then
         openurl=1
+        prompt="Url for:"
     fi
     shift
 done
@@ -22,7 +25,7 @@ password_files=( "$prefix"/**/*.gpg )
 password_files=( "${password_files[@]#"$prefix"/}" )
 password_files=( "${password_files[@]%.gpg}" )
 
-passwordfile=$(printf '%s\n' "${password_files[@]}" | dmenu -p "Get user for: " "$@")
+passwordfile=$(printf '%s\n' "${password_files[@]}" | dmenu -p "$prompt" "$@")
 
 [[ -n $passwordfile ]] || exit
 
