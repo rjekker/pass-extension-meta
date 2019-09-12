@@ -20,6 +20,8 @@ while (( "$#" )); do
 done
 
 
+[[ -z $METAMENU_BROWSER_COMMAND ]] && METAMENU_BROWSER_COMMAND="x-www-browser"
+
 prefix=${PASSWORD_STORE_DIR-~/.password-store}
 password_files=( "$prefix"/**/*.gpg )
 password_files=( "${password_files[@]#"$prefix"/}" )
@@ -30,7 +32,7 @@ passwordfile=$(printf '%s\n' "${password_files[@]}" | dmenu -p "$prompt" "$@")
 [[ -n $passwordfile ]] || exit
 
 if [[ $openurl = 1 ]]; then
-    pass meta -U "$passwordfile" 2>/dev/null | xargs x-www-browser
+    pass meta -U "$passwordfile" 2>/dev/null | xargs $METAMENU_BROWSER_COMMAND
 else
     if [[ $typeit = 0 ]]; then
         pass meta -cu "$passwordfile" 2>/dev/null
