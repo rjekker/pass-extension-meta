@@ -16,6 +16,7 @@ install:
 	@install -v -m 0644 man/pass-extension-meta.1 "$(DESTDIR)$(MANDIR)/man1/pass-meta.1"
 	@install -v -d "$(DESTDIR)$(SYSTEM_EXTENSION_DIR)/"
 	@install -v -m 0755 src/meta.bash "$(DESTDIR)$(SYSTEM_EXTENSION_DIR)/meta.bash"
+	@install -v -d "$(BINDIR)/"
 	@install -v -m 0755 src/metamenu "$(BINDIR)/metamenu"
 	@install -v -d "$(DESTDIR)$(BASHCOMPDIR)/"
 	@install -v -m 644 completion/pass-meta.bash.completion  "$(DESTDIR)$(BASHCOMPDIR)/pass-meta"
